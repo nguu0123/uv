@@ -416,11 +416,20 @@ impl Cache {
         // We have to put this below the gitignore. Otherwise, if the build backend uses the rust
         // ignore crate it will walk up to the top level .gitignore and ignore its python source
         // files.
-        fs_err::OpenOptions::new().create(true).write(true).open(
-            root.join(CacheBucket::SourceDistributions.to_str())
-                .join(".git"),
-        )?;
+        let path = root
+            .join(CacheBucket::SourceDistributions.to_str())
+            .join(".git");
 
+        if path.exists() {
+            // Just open read-only, since the file is already there
+            fs_err::File::open(&path)?;
+        } else {
+            // Create it if missing
+            fs_err::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .open(&path)?;
+        }
         // Block cache removal operations from interfering.
         let lock_file = match LockedFile::acquire_shared_blocking(
             root.join(".lock"),
